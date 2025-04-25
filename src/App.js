@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getPromedioPais, getVinosPorPrecio, getVinosPorPuntuacion } from './services/api';
+import { getPromedioPais, getVinosPorPrecio, getVinosPorPuntuacion, getVinosPorTipo, getVinosPorCepa } from './services/api';
 import VinoCard from './components/VinoCard';
 import './styles.css';
 
@@ -8,11 +8,22 @@ const paises = [
   'Portugal', 'Estados Unidos', 'Australia', 'Sudáfrica'
 ];
 
+const tiposVino = [
+  'Tinto', 'Blanco', 'Rosado', 'Espumoso', 'Dulce', 'Fortificado'
+];
+
+const cepas = [
+  'Cabernet Sauvignon', 'Merlot', 'Malbec', 'Pinot Noir', 'Syrah',
+  'Tempranillo', 'Sangiovese', 'Chardonnay', 'Sauvignon Blanc', 'Riesling'
+];
+
 function App() {
   const [consulta, setConsulta] = useState('pais');
   const [paisSeleccionado, setPaisSeleccionado] = useState('Argentina');
   const [precio, setPrecio] = useState(50);
   const [puntuacion, setPuntuacion] = useState(90);
+  const [tipoSeleccionado, setTipoSeleccionado] = useState('Tinto');
+  const [cepaSeleccionada, setCepaSeleccionada] = useState('Malbec');
   const [resultados, setResultados] = useState({ tipo: 'pais', data: null });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -55,6 +66,30 @@ function App() {
           };
           break;
           
+        case 'tipo':
+          response = await getVinosPorTipo(tipoSeleccionado);
+          resultData = {
+            tipo: 'tipo',
+            data: {
+              tipo: tipoSeleccionado,
+              cantidad: response.data?.cantidad || 0,
+              vinos: response.data?.vinos || []
+            }
+          };
+          break;
+          
+        case 'cepa':
+          response = await getVinosPorCepa(cepaSeleccionada);
+          resultData = {
+            tipo: 'cepa',
+            data: {
+              cepa: cepaSeleccionada,
+              cantidad: response.data?.cantidad || 0,
+              vinos: response.data?.vinos || []
+            }
+          };
+          break;
+          
         default:
           resultData = { tipo: consulta, data: null };
       }
@@ -71,11 +106,10 @@ function App() {
 
   useEffect(() => {
     buscarDatos();
-  }, [consulta, paisSeleccionado, precio, puntuacion]);
+  }, [consulta, paisSeleccionado, precio, puntuacion, tipoSeleccionado, cepaSeleccionada]);
 
   const cambiarConsulta = (nuevaConsulta) => {
     setConsulta(nuevaConsulta);
-    // Resetear resultados al cambiar de tipo de consulta
     setResultados({ tipo: nuevaConsulta, data: null });
   };
 
@@ -91,19 +125,31 @@ function App() {
             onClick={() => cambiarConsulta('pais')} 
             style={{ backgroundColor: consulta === 'pais' ? '#6b2737' : '#9e3647', color: 'white' }}
           >
-            Por país
+            Por País
           </button>
           <button 
             onClick={() => cambiarConsulta('precio')} 
             style={{ backgroundColor: consulta === 'precio' ? '#6b2737' : '#9e3647', color: 'white' }}
           >
-            Por precio
+            Por Precio
           </button>
           <button 
             onClick={() => cambiarConsulta('puntuacion')} 
             style={{ backgroundColor: consulta === 'puntuacion' ? '#6b2737' : '#9e3647', color: 'white' }}
           >
-            Por puntuación según premiaciones
+            Por Puntuación de Galardones
+          </button>
+          <button 
+            onClick={() => cambiarConsulta('tipo')} 
+            style={{ backgroundColor: consulta === 'tipo' ? '#6b2737' : '#9e3647', color: 'white' }}
+          >
+            Por Tipo
+          </button>
+          <button 
+            onClick={() => cambiarConsulta('cepa')} 
+            style={{ backgroundColor: consulta === 'cepa' ? '#6b2737' : '#9e3647', color: 'white' }}
+          >
+            Por Cepa
           </button>
         </div>
 
@@ -149,6 +195,36 @@ function App() {
               />
             </div>
           )}
+
+          {consulta === 'tipo' && (
+            <div className="filter">
+              <label>Selecciona un tipo:</label>
+              <select 
+                value={tipoSeleccionado} 
+                onChange={(e) => setTipoSeleccionado(e.target.value)}
+                style={{ backgroundColor: '#f8f1e9' }}
+              >
+                {tiposVino.map((tipo) => (
+                  <option key={tipo} value={tipo}>{tipo}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {consulta === 'cepa' && (
+            <div className="filter">
+              <label>Selecciona una cepa:</label>
+              <select 
+                value={cepaSeleccionada} 
+                onChange={(e) => setCepaSeleccionada(e.target.value)}
+                style={{ backgroundColor: '#f8f1e9' }}
+              >
+                {cepas.map((cepa) => (
+                  <option key={cepa} value={cepa}>{cepa}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -176,9 +252,13 @@ function App() {
               </div>
             )}
 
-            {(resultados.tipo === 'precio' || resultados.tipo === 'puntuacion') && (
+            {(resultados.tipo === 'precio' || resultados.tipo === 'puntuacion' || resultados.tipo === 'tipo' || resultados.tipo === 'cepa') && (
               <>
-                <h2>{resultados.data.cantidad} vinos encontrados</h2>
+                <h2>
+                  {resultados.tipo === 'tipo' && `${resultados.data.cantidad} vinos de tipo ${resultados.data.tipo}`}
+                  {resultados.tipo === 'cepa' && `${resultados.data.cantidad} vinos con cepa ${resultados.data.cepa}`}
+                  {resultados.tipo !== 'tipo' && resultados.tipo !== 'cepa' && `${resultados.data.cantidad} vinos encontrados`}
+                </h2>
                 <div className="vinos-grid">
                   {resultados.data.vinos.length > 0 ? (
                     resultados.data.vinos.map((vino) => (

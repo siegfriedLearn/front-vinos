@@ -9,7 +9,7 @@ const VinoCard = ({ vino }) => {
       {vino.precio && <p><strong>Precio:</strong> {vino.precio} {vino.moneda}</p>}
       {vino.puntuacion && <p><strong>Puntuación:</strong> {vino.puntuacion}</p>}
       {vino.tipo_vino && <p><strong>Tipo:</strong> {vino.tipo_vino}</p>}
-      {vino.anio_produccion && <p><strong>Añada:</strong> {vino.anio_produccion}</p>}
+      {vino.anio_produccion && <p><strong>Año de producción:</strong> {vino.anio_produccion}</p>}
     </div>
   );
 };
