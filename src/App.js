@@ -9,11 +9,11 @@ const paises = [
 ];
 
 function App() {
-  const [consulta, setConsulta] = useState('');
+  const [consulta, setConsulta] = useState('pais');
   const [paisSeleccionado, setPaisSeleccionado] = useState('Argentina');
   const [precio, setPrecio] = useState(50);
   const [puntuacion, setPuntuacion] = useState(90);
-  const [resultados, setResultados] = useState(null);
+  const [resultados, setResultados] = useState({ tipo: 'pais', data: null });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -22,32 +22,48 @@ function App() {
     setError(null);
     try {
       let response;
-       switch (consulta) {
+      let resultData;
+      
+      switch (consulta) {
         case 'pais':
           response = await getPromedioPais(paisSeleccionado);
-          setResultados(response.data);
+          resultData = {
+            tipo: 'pais',
+            data: response.data
+          };
           break;
+          
         case 'precio':
-          console.log("HEREEEEE")
           response = await getVinosPorPrecio(precio);
-          setResultados({
-            cantidad: response.data?.cantidad || 0,
-            vinos: response.data?.vinos || []
-          });
+          resultData = {
+            tipo: 'precio',
+            data: {
+              cantidad: response.data?.cantidad || 0,
+              vinos: response.data?.vinos || []
+            }
+          };
           break;
+          
         case 'puntuacion':
           response = await getVinosPorPuntuacion(puntuacion);
-          setResultados({
-            cantidad: response.data?.cantidad || 0,
-            vinos: response.data?.vinos || []
-          });
+          resultData = {
+            tipo: 'puntuacion',
+            data: {
+              cantidad: response.data?.cantidad || 0,
+              vinos: response.data?.vinos || []
+            }
+          };
           break;
+          
         default:
-          break;
+          resultData = { tipo: consulta, data: null };
       }
+      
+      setResultados(resultData);
     } catch (err) {
       setError('Error al obtener los datos. Por favor, intenta nuevamente.');
       console.error(err);
+      setResultados({ tipo: consulta, data: null });
     } finally {
       setLoading(false);
     }
@@ -57,31 +73,37 @@ function App() {
     buscarDatos();
   }, [consulta, paisSeleccionado, precio, puntuacion]);
 
+  const cambiarConsulta = (nuevaConsulta) => {
+    setConsulta(nuevaConsulta);
+    // Resetear resultados al cambiar de tipo de consulta
+    setResultados({ tipo: nuevaConsulta, data: null });
+  };
+
   return (
     <div className="app-container" style={{ backgroundColor: '#f5e9e0' }}>
       <header className="app-header" style={{ backgroundColor: '#6b2737', color: 'white' }}>
-        <h1>Catálogo de Vinos</h1>
+        <h1>Consulta de Vinos ETITC</h1>
       </header>
 
       <div className="controls-container">
         <div className="tabs">
           <button 
-            onClick={() => setConsulta('pais')} 
+            onClick={() => cambiarConsulta('pais')} 
             style={{ backgroundColor: consulta === 'pais' ? '#6b2737' : '#9e3647', color: 'white' }}
           >
-            Por País
+            Por país
           </button>
           <button 
-            onClick={() => setConsulta('precio')} 
+            onClick={() => cambiarConsulta('precio')} 
             style={{ backgroundColor: consulta === 'precio' ? '#6b2737' : '#9e3647', color: 'white' }}
           >
-            Por Precio
+            Por precio
           </button>
           <button 
-            onClick={() => setConsulta('puntuacion')} 
+            onClick={() => cambiarConsulta('puntuacion')} 
             style={{ backgroundColor: consulta === 'puntuacion' ? '#6b2737' : '#9e3647', color: 'white' }}
           >
-            Por Puntuación
+            Por puntuación según premiaciones
           </button>
         </div>
 
@@ -134,39 +156,47 @@ function App() {
         {loading && <p>Cargando...</p>}
         {error && <p className="error">{error}</p>}
 
-        {!loading && !error && resultados && (
+        {!loading && !error && resultados.data && (
           <>
-            {consulta === 'pais' && (
+            {resultados.tipo === 'pais' && (
               <div className="pais-result" style={{ backgroundColor: '#e8d5c0', padding: '20px', borderRadius: '8px' }}>
                 <h2>Resultados para {paisSeleccionado}</h2>
-                <p><strong>Promedio de puntuación:</strong> {resultados.promedio_puntuacion}</p>
-                <p><strong>Máxima puntuación:</strong> {resultados.maxima_puntuacion}</p>
-                <p><strong>Cantidad de vinos:</strong> {resultados.cantidad_vinos}</p>
+                <p><strong>Promedio de puntuación:</strong> {resultados.data.promedio_puntuacion}</p>
+                <p><strong>Máxima puntuación:</strong> {resultados.data.maxima_puntuacion}</p>
+                <p><strong>Cantidad de vinos:</strong> {resultados.data.cantidad_vinos}</p>
                 <p><strong>Calidad del país:</strong> 
                   <span style={{ 
-                    color: resultados.promedio_puntuacion >= 90 ? '#4a6b3a' : 
-                          resultados.promedio_puntuacion >= 80 ? '#8a6b3a' : '#6b2737',
+                    color: resultados.data.promedio_puntuacion >= 90 ? '#4a6b3a' : 
+                          resultados.data.promedio_puntuacion >= 80 ? '#8a6b3a' : '#6b2737',
                     fontWeight: 'bold'
                   }}>
-                    {resultados.calidad_pais}
+                    {resultados.data.calidad_pais}
                   </span>
                 </p>
               </div>
             )}
 
-            {(consulta === 'precio' || consulta === 'puntuacion') && (
+            {(resultados.tipo === 'precio' || resultados.tipo === 'puntuacion') && (
               <>
-                <h2>{resultados.cantidad} vinos encontrados</h2>
+                <h2>{resultados.data.cantidad} vinos encontrados</h2>
                 <div className="vinos-grid">
-                  {resultados.vinos.map((vino) => (
-                    <VinoCard key={vino.vino_id} vino={vino} />
-                  ))}
+                  {resultados.data.vinos.length > 0 ? (
+                    resultados.data.vinos.map((vino) => (
+                      <VinoCard key={vino.vino_id} vino={vino} />
+                    ))
+                  ) : (
+                    <p>No se encontraron vinos con los criterios seleccionados</p>
+                  )}
                 </div>
               </>
             )}
           </>
         )}
       </div>
+      <header className="app-header" style={{ backgroundColor: '#6b2737', color: 'white' }}>
+        <h2>Sistemas Expertos</h2>
+        <h3>Carlos Medina - Juan Suárez - Brayan Guerrero</h3>
+      </header>
     </div>
   );
 }
